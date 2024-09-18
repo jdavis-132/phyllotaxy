@@ -1,0 +1,28 @@
+PLINK v1.90b4 64-bit (20 Mar 2017)
+Options in effect:
+  --bfile SAP_phyllotaxy_filtered
+  --chr 6
+  --ld-snp Chr06_41390777
+  --ld-window 99999
+  --ld-window-kb 99999
+  --ld-window-r2 0
+  --out LD_Chr06_41390777
+  --r2
+
+Hostname: c2507.swan.hcc.unl.edu
+Working directory: /lustre/work/schnablelab/jdavis132/phyllotaxy2024/genotype
+Start time: Wed Sep 11 19:41:07 2024
+
+Random number seed: 1726101667
+385087 MB RAM detected; reserving 192543 MB for main workspace.
+456885 out of 4693810 variants loaded from .bim file.
+218 people (0 males, 0 females, 218 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to LD_Chr06_41390777.nosex .
+Using up to 19 threads (change this with --threads).
+Before main variant filters, 218 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+456885 variants and 218 people pass filters and QC.
+Note: No phenotypes present.
+--r2 to LD_Chr06_41390777.ld ... done.
+
+End time: Wed Sep 11 19:41:08 2024

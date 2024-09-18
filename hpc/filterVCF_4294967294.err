@@ -1,0 +1,15 @@
+
+VCFtools - 0.1.16
+(C) Adam Auton and Anthony Marcketta 2009
+
+Parameters as interpreted:
+	--vcf SAP_phyllotaxy_noSV.vcf
+	--recode-INFO-all
+	--out SAP_phyllotaxy_biallelic.vcf
+	--recode
+	--remove-indels
+
+After filtering, kept 218 out of 218 Individuals
+Outputting VCF file...
+After filtering, kept 4693810 out of a possible 4693810 Sites
+Run Time = 387.00 seconds

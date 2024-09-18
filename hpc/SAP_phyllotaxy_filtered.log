@@ -1,0 +1,26 @@
+PLINK v2.00a1LM SSE4.2 Intel (11 Feb 2018)
+Options in effect:
+  --make-bed
+  --out SAP_phyllotaxy_filtered
+  --vcf SAP_phyllotaxy_biallelic.vcf.recode.vcf
+
+Hostname: c2507.swan.hcc.unl.edu
+Working directory: /lustre/work/schnablelab/jdavis132/phyllotaxy2024/genotype
+Start time: Tue Sep  3 15:32:34 2024
+
+Random number seed: 1725395554
+385075 MB RAM detected; reserving 192537 MB for main workspace.
+Using up to 20 threads (change this with --threads).
+--vcf: 4693810 variants scanned.
+--vcf: SAP_phyllotaxy_filtered-temporary.pgen +
+SAP_phyllotaxy_filtered-temporary.pvar + SAP_phyllotaxy_filtered-temporary.psam
+written.
+218 samples (0 females, 0 males, 218 ambiguous; 218 founders) loaded from
+SAP_phyllotaxy_filtered-temporary.psam.
+4693810 variants loaded from SAP_phyllotaxy_filtered-temporary.pvar.
+Note: No phenotype data present.
+Writing SAP_phyllotaxy_filtered.bed ... done.
+Writing SAP_phyllotaxy_filtered.bim ... done.
+Writing SAP_phyllotaxy_filtered.fam ... done.
+
+End time: Tue Sep  3 15:32:55 2024

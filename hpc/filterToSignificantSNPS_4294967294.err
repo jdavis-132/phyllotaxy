@@ -1,0 +1,17 @@
+
+Lmod is automatically replacing "perl/5.26" with "vcftools/0.1".
+
+
+VCFtools - 0.1.16
+(C) Adam Auton and Anthony Marcketta 2009
+
+Parameters as interpreted:
+	--vcf SAP_phyllotaxy_biallelic.vcf.recode.vcf
+	--out sigSNPSMed
+	--recode
+	--snps sigSNPS.tsv
+
+After filtering, kept 218 out of 218 Individuals
+Outputting VCF file...
+After filtering, kept 3 out of a possible 4693810 Sites
+Run Time = 14.00 seconds
