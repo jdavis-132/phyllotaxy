@@ -1,0 +1,224 @@
+---
+title: "InternodeAnalysis"
+author: "Jensina Davis"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(contrasts=c('contr.sum', 'contr.poly'))
+
+library(lme4)
+library(tidyverse)
+library(stringi)
+library(car)
+library(rMVP)
+library(ggh4x)
+library(CMplot)
+library(ggrepel)
+
+calcHeritability2 <- function(data, trait)
+{
+  # Filter out NAs for this trait and the reference genotype
+  dfh <- filter(data, !is.na({{trait}}), PI!='PI656058')
+  # Randomly add back in 2 reps of ref genotype
+  dfh_ref <- filter(data, !is.na({{trait}}), PI =='PI656058')
+  r <- sample(1:8, size = 2, replace = FALSE)
+  dfh <- add_row(dfh, dfh_ref[(r[1]), ])
+  dfh <- add_row(dfh, dfh_ref[(r[2]), ])
+  dfh <- group_by(dfh, PI)
+  dfh <- summarize(dfh, n = n(), trait = {{trait}})
+  dfh <- ungroup(dfh)
+  dfh <- filter(dfh, n>1)
+  print(length(unique(dfh$PI)))
+  fit <- lmer(trait ~ (1|PI), data = dfh)
+  vc <- as.data.frame(formatVC(VarCorr(fit)))
+  sigma <- as.numeric(vc$Std.Dev.)
+  h <- sigma[1]^2/(sigma[1]^2 + (sigma[2]^2)/2)
+  resids <- residuals(fit)
+  print(plot(resids))
+  qqPlot(resids, main = deparse(substitute(trait)))
+  
+  hist <- ggplot(data, aes({{trait}})) + 
+    geom_histogram(binwidth = 0.002) + 
+    theme_minimal()
+  print(hist)
+  
+  return (h)
+}
+
+df <- read.csv('/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/internodeData.csv', header = TRUE)
+in_df <- df %>%
+  as_tibble() %>%
+  rowwise() %>%
+  mutate(PI = sub('PI_', 'PI', PI_num), 
+         i1 = (h_1 - h_0), 
+         i2 = (h_2 - h_1),
+         i3 = (h_3 - h_2),
+         i4 = (h_4 - h_3),
+         i5 = (h_5 - h_4), 
+         i6 = (h_6 - h_5),
+         i7 = (h_7 - h_6),
+         i8 = (h_8 - h_7),
+         i9 = (h_9 - h_8),
+         i10 = (h_10 - h_9),
+         i11 = (h_11 - h_10),
+         i12 = (h_12 - h_11),
+         i13 = (h_13 - h_12),
+         i14 = (h_14 - h_13))
+in_df <- in_df %>% 
+  select(c(plant_name, plant_num, PI, img_date, starts_with('i')))
+in_df <- in_df[-1, ]
+```
+
+```{r prelim-data-vis}
+for (i in 5:8)
+{
+  tmp <- in_df %>%
+    select(c(plant_num, t = i))
+  
+  quant <- quantile(tmp$t, probs = c(0.25, 0.75), na.rm = TRUE)
+  iqr15 <- (3*(quant[2] - quant[1]))
+  print(iqr15)
+  
+  plot <- ggplot(tmp, mapping = aes(t)) + 
+    geom_histogram(binwidth = 0.01) +
+    geom_vline(xintercept = 0.075)
+  print(plot)
+}
+
+indf_long <- in_df %>% 
+  select(plant_name:i4) %>%
+  pivot_longer(cols = i1:i4, names_to = 'top_leaf', names_prefix = 'i', values_to = 'ilen')
+
+ql <- quantile(indf_long$ilen, probs = c(0.25, 0.75), na.rm = TRUE)
+iqr3 <- 3*(ql[2] - ql[1]) + ql[2]
+print(iqr3)
+
+iqr3l <- ql[1] - (3*(ql[2] - ql[1]))
+
+raw_dist1to4 <- indf_long %>%
+  filter(!is.na(ilen)) %>%
+  ggplot(aes(ilen)) +
+    geom_histogram(binwidth = 0.005) +
+    geom_vline(xintercept = iqr3) + 
+    geom_vline(xintercept = max(c(iqr3l, 0)))
+
+print(raw_dist1to4)
+```
+
+```{r removeOutliers1}
+ilen <- filter(indf_long, ilen <= iqr3)
+
+hist_ilen <- ggplot(ilen, aes(ilen)) +
+  geom_histogram(binwidth = 0.002)
+print(hist_ilen)
+
+ilen <- filter(ilen, ilen>0.006)
+
+hist_ilen <- ggplot(ilen, aes(ilen)) +
+  geom_histogram(binwidth = 0.002) 
+print(hist_ilen)
+```
+```{r summaryVars}
+blup <- filter(ilen, !is.na(ilen) & PI!='PI656058')
+blup_ref <- filter(ilen, !is.na(ilen) & PI=='PI656058')
+plants <- unique(blup_ref$plant_num)
+r <- sample(1:8, size = 2, replace = FALSE)
+blup <- blup_ref %>%
+  filter(plant_num==plants[r[1]]|plant_num==plants[r[2]]) %>%
+  full_join(blup) %>%
+  reframe(plant_name = plant_name, 
+          top_leaf = top_leaf, 
+          plant_num = plant_num, 
+          n = length(unique(plant_num)), 
+          ilen = ilen, 
+          img_date = img_date, 
+          .by = c(PI)) %>%
+  filter(n>1)
+fit1 <- lmer(ilen ~ 1|PI, blup)
+summary(fit1)
+fit2 <- lmer(ilen ~ (1|PI) + (1|img_date), blup)
+summary(fit2)
+anova(fit1, fit2) ## fit2 is only marginally better; use fit1
+
+blup <- summarise(blup, mean = mean(ilen), n = n(), .by = PI)
+
+ranef <- ranef(fit1)
+pi_r <- ranef$PI
+pi_r$PI <- row.names(pi_r)
+pi_r$blup <- pi_r$`(Intercept)`
+
+blup <- full_join(blup, pi_r)
+
+vc <- as.data.frame(formatVC(VarCorr(fit1)))
+sigma <- as.numeric(vc$Std.Dev.)
+h_blup <- sigma[1]^2/(sigma[1]^2 + (sigma[2]^2)/2)
+print(h_blup)
+
+ilen2 <- ilen %>%
+  summarise(mean = mean(ilen), n = n(), .by = c(plant_num, PI))
+h_avg <- calcHeritability2(ilen2, mean)
+q_m <- quantile(ilen2$mean, probs = c(0.25, 0.75), na.rm = TRUE)
+iqr3h <- 3*(q_m[2] - q_m[1]) + q_m[2]
+iqr3l <- q_m[1] - 3*(q_m[2] - q_m[1])
+
+hist_mean <- ggplot(ilen2, aes(mean)) +
+  geom_histogram(binwidth = 0.002) +
+  geom_vline(xintercept = iqr3l) +
+  geom_vline(xintercept = iqr3h)
+print(hist_mean)
+
+# Remove extreme upper outliers
+ilen2 <- filter(ilen2, mean<iqr3h)
+h_avg <- calcHeritability2(ilen2, mean)
+```
+
+```{r GWAS}
+p <- select(ilen2, PI:mean)
+p$PI <- sub('PI', 'PI_', p$PI)
+write.csv(p, file = '/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/meanInternode.csv', row.names = FALSE)
+
+g <- unique(p$PI)
+genotypeData <- read.csv('/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My\ Drive/Schnable-Lab/Final_SAP_Cleaned_imputed_Filt_MAF_HET.hmp.txt', 
+                         header = TRUE, sep = '\t', dec = '.')
+new_genotypeData <- genotypeData[, which((names(genotypeData) %in% g)==TRUE)]
+first_cols <- genotypeData[,1:11]
+new_genotypeData <- cbind(first_cols,new_genotypeData)
+colnames(new_genotypeData[1]) <- 'rs#'
+write.table(new_genotypeData, file = '/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/SAP_genotype_internode.hmp.txt', sep = '\t', quote = FALSE, row.names = FALSE)
+
+MVP.Data(fileHMP = '/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/SAP_genotype_internode.hmp.txt',
+         filePhe = '/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/meanInternode.csv',
+         sep.phe = ',', 
+         fileKin = TRUE,
+         filePC = TRUE,
+         out = '/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/mvp.il',
+         priority = 'memory')
+
+genotype <- attach.big.matrix('/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/mvp.il.geno.desc')
+phenotype <- read.table('/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/mvp.il.phe', header = TRUE)
+genoMap <- read.table('/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/mvp.il.geno.map', header = TRUE)
+kinship <- attach.big.matrix('/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/mvp.il.kin.desc')
+pc <- bigmemory::as.matrix(attach.big.matrix('/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/mvp.il.pc.desc'))
+sig_thresh <- 0.05/78251
+
+MVP(phe <- phenotype,
+    geno = genotype,
+    map = genoMap,
+    K = kinship, 
+    nPC.GLM = 5,
+    nPC.MLM = 5,
+    nPC.FarmCPU = 5,
+    priority = 'memory',
+    vc.method = 'BRENT', 
+    maxLoop = 10,
+    method.bin = 'static',
+    threshold = sig_thresh, 
+    method = c('MLM', 'GLM', 'FarmCPU'),
+    file.output = TRUE,
+    outpath = '/Users/jensinadavis/Library/CloudStorage/GoogleDrive-davisjensina@gmail.com/My Drive/Schnable-Lab/in-silico/Data/')
+
+gc()
+```
